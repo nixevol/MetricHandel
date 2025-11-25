@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MetricHandel</title>
+    <!-- 本地静态资源，便于在内网环境运行，通过 /static 挂载访问 -->
+    <link href="/static/libs/tailwind.min.css" rel="stylesheet">
+    <script src="/static/libs/axios.min.js"></script>
+    <link href="/static/libs/all.min.css" rel="stylesheet">
+    <style>
+        /* 导航按钮样式 */
+        .nav-btn {
+            color: #cbd5e1;
+            background-color: transparent;
+        }
+        .nav-btn:hover {
+            background-color: #374151;
+            color: white;
+        }
+        .nav-btn.active {
+            background-color: #374151;
+            color: white;
+        }
+        .nav-btn.active:hover {
+            background-color: #4b5563;
+        }
+    </style>
+</head>
+<body class="bg-gray-50 font-sans">
+    <div class="flex h-screen">
+        <!-- 侧边导航栏 -->
+        <div class="w-64 flex flex-col" style="background-color: #1e293b; color: white; min-width: 256px;">
+            <!-- Logo -->
+            <div class="p-6" style="border-bottom: 1px solid #475569;">
+                <h1 class="text-xl font-bold text-center" style="color: white;">MetricHandel</h1>
+            </div>
+            
+            <!-- 导航菜单 -->
+            <nav class="flex-1 p-4">
+                <div class="space-y-2">
+                    <button id="nav-files" onclick="showFilesPanel()" class="nav-btn w-full text-left px-4 py-3 rounded-lg transition-colors flex items-center">
+                        <i class="fas fa-folder mr-3"></i>
+                        文件管理
+                    </button>
+                    <button id="nav-database" onclick="showDatabasePanel()" class="nav-btn w-full text-left px-4 py-3 rounded-lg transition-colors flex items-center">
+                        <i class="fas fa-database mr-3"></i>
+                        数据库管理
+                    </button>
+                    <button id="nav-scripts" onclick="showScriptsPanel()" class="nav-btn w-full text-left px-4 py-3 rounded-lg transition-colors flex items-center">
+                        <i class="fas fa-layer-group mr-3"></i>
+                        合并数据
+                    </button>
+                </div>
+            </nav>
+        </div>
+        
+        <!-- 主内容区 -->
+        <div class="flex-1 flex flex-col overflow-auto">
+            <!-- 顶部工具栏 -->
+            <header class="bg-white shadow-sm border-b px-6 py-4 flex-shrink-0">
+                <div class="flex justify-between items-center">
+                    <div>
+                        <h2 id="pageTitle" class="text-2xl font-semibold text-gray-800">欢迎使用</h2>
+                        <p id="pageSubtitle" class="text-sm text-gray-600 mt-1">选择左侧菜单开始操作</p>
+                    </div>
+                    <div class="flex items-center space-x-4">
+                        <div id="searchContainer" class="hidden">
+                            <div class="flex items-center space-x-2">
+                                <select id="searchField" class="px-3 py-2 border border-gray-300 rounded-lg text-sm">
+                                    <option value="">选择字段...</option>
+                                </select>
+                                <input type="text" id="searchValue" placeholder="输入查询值..." 
+                                       class="px-3 py-2 border border-gray-300 rounded-lg text-sm w-64">
+                                <button onclick="searchData()" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 text-sm">
+                                    <i class="fas fa-search mr-1"></i>查询
+                                </button>
+                                <button onclick="clearSearch()" class="bg-gray-500 text-white px-4 py-2 rounded-lg hover:bg-gray-600 text-sm">
+                                    重置
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </header>
+            
+            <!-- 内容区域 -->
+            <main class="flex-1 p-6 overflow-auto">
+                <!-- 欢迎页面 -->
+                <div id="welcomePanel" class="text-center py-20">
+                    <div class="max-w-md mx-auto">
+                        <i class="fas fa-chart-line text-6xl text-blue-600 mb-6"></i>
+                        <h3 class="text-2xl font-semibold text-gray-800 mb-4">MetricHandel</h3>
+                        <div class="grid grid-cols-3 gap-4 text-sm">
+                            <div class="bg-blue-50 p-4 rounded-lg cursor-pointer" onclick="showFilesPanel()">
+                                <i class="fas fa-folder text-blue-600 mb-2"></i>
+                                <p class="font-medium">文件管理</p>
+                                <p class="text-gray-600">管理数据文件</p>
+                            </div>
+                            <div class="bg-green-50 p-4 rounded-lg cursor-pointer" onclick="showDatabasePanel()">
+                                <i class="fas fa-database text-green-600 mb-2"></i>
+                                <p class="font-medium">数据库管理</p>
+                                <p class="text-gray-600">查看数据表</p>
+                            </div>
+                            <div class="bg-purple-50 p-4 rounded-lg cursor-pointer" onclick="showScriptsPanel()">
+                                <i class="fas fa-layer-group text-purple-600 mb-2"></i>
+                                <p class="font-medium">合并数据</p>
+                                <p class="text-gray-600">批量处理数据</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 数据库管理面板 -->
+                <div id="databasePanel" class="hidden bg-white rounded-lg shadow-sm" style="height: calc(100vh - 200px);">
+                    <div class="h-full flex flex-col">
+                        
+                        <!-- 表标签页 -->
+                        <div class="border-b border-gray-200 pt-4">
+                            <div class="flex items-center px-6">
+                                <div class="flex-1 overflow-x-auto">
+                                    <nav id="tableTabs" class="flex space-x-8 min-w-max">
+                                        <!-- 动态生成标签页 -->
+                                    </nav>
+                                </div>
+                                <div class="flex items-center space-x-2 ml-4 flex-shrink-0">
+                                    <div class="relative">
+                                        <button id="downloadBtn" onclick="toggleDownloadMenu()" class="bg-green-600 text-white px-3 py-1 rounded text-sm hover:bg-green-700 flex items-center" style="display: none;">
+                                            <i class="fas fa-download mr-1"></i>下载数据
+                                            <i class="fas fa-chevron-down ml-1"></i>
+                                        </button>
+                                        <div id="downloadMenu" class="hidden absolute right-0 mt-1 w-32 bg-white border border-gray-200 rounded shadow-lg z-20">
+                                            <button onclick="downloadTableData('csv')" class="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-100">
+                                                <i class="fas fa-file-csv mr-2"></i>CSV格式
+                                            </button>
+                                            <button onclick="downloadTableData('xlsx')" class="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-100">
+                                                <i class="fas fa-file-excel mr-2"></i>Excel格式
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <button id="clearTableBtn" onclick="clearTableData()" class="bg-red-600 text-white px-3 py-1 rounded text-sm hover:bg-red-700 flex items-center" style="display: none;">
+                                        <i class="fas fa-trash mr-1"></i>清空数据
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- 无数据提示 -->
+                        <div id="noDataMessage" class="flex-1 flex items-center justify-center">
+                            <div class="text-center">
+                                <i class="fas fa-database text-gray-400 text-6xl mb-4"></i>
+                                <h3 class="text-xl font-medium text-gray-600 mb-2">暂无数据</h3>
+                                <p class="text-gray-500">请先通过“合并数据”导入数据</p>
+                            </div>
+                        </div>
+                        
+                        <!-- 数据表格容器 -->
+                        <div id="dataTable" class="hidden flex-1 flex flex-col">
+                            
+                            <!-- 表格主体 - 关键修复点 -->
+                            <div class="flex-1" style="overflow: auto; max-height: calc(100vh - 350px);">
+                                <table class="w-full table-auto border-collapse">
+                                    <thead id="tableHeader" class="bg-gray-50" style="position: sticky; top: 0; z-index: 10;">
+                                    </thead>
+                                    <tbody id="tableBody" class="bg-white">
+                                    </tbody>
+                                </table>
+                            </div>
+                            
+                            <!-- 分页 -->
+                            <div class="px-6 py-3 bg-gray-50 border-t border-gray-200 flex justify-between items-center">
+                                <div class="flex items-center space-x-2">
+                                    <span class="text-sm text-gray-600">跳转到</span>
+                                    <input type="number" id="jumpToPage" min="1" class="w-16 px-2 py-1 border border-gray-300 rounded text-sm text-center" placeholder="页">
+                                    <button onclick="jumpToPage()" class="px-2 py-1 bg-blue-600 text-white rounded text-sm hover:bg-blue-700">跳转</button>
+                                </div>
+                                <div class="flex items-center space-x-4">
+                                    <span id="recordCount" class="text-sm text-gray-600"></span>
+                                    <div id="pageInfo" class="text-sm text-gray-600"></div>
+                                    <div class="flex items-center space-x-2">
+                                        <button id="prevPage" onclick="loadTableData(currentPage - 1)" class="px-3 py-1 bg-white border border-gray-300 text-gray-700 rounded hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed">上一页</button>
+                                        <div id="pageNumbers" class="flex space-x-1"></div>
+                                        <button id="nextPage" onclick="loadTableData(currentPage + 1)" class="px-3 py-1 bg-white border border-gray-300 text-gray-700 rounded hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed">下一页</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 合并数据面板 -->
+                <div id="scriptsPanel" class="hidden">
+                    <div class="bg-white rounded-lg shadow-sm">
+                        <div class="p-6">
+                            <div class="mb-4 flex justify-between items-center">
+                                <div class="flex items-center space-x-2">
+                                    <button onclick="selectAllModels()" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 text-sm">
+                                        <i class="fas fa-check-double mr-1"></i>全选
+                                    </button>
+                                    <button onclick="clearModelSelection()" class="bg-gray-500 text-white px-4 py-2 rounded-lg hover:bg-gray-600 text-sm">
+                                        清空选择
+                                    </button>
+                                </div>
+                                <button onclick="executeSelectedModels()" class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 text-sm">
+                                    <i class="fas fa-play mr-1"></i>执行选中
+                                </button>
+                            </div>
+                            
+                            <div id="modelsList" class="space-y-3">
+                                <!-- 动态加载模型列表 -->
+                            </div>
+                            
+                            <div id="executionResult" class="mt-6 hidden">
+                                <h4 class="font-medium text-gray-800 mb-2">执行结果</h4>
+                                <div id="resultContent" class="bg-gray-50 p-4 rounded-lg text-sm">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 文件管理面板 -->
+                <div id="filesPanel" class="hidden">
+                    <div class="bg-white rounded-lg shadow-sm flex flex-col" style="height: calc(100vh - 180px);">
+                        <!-- 上传区域 - 固定在顶部 -->
+                        <div class="p-6 border-b border-gray-200 flex-shrink-0">
+                            <label class="block text-sm font-medium text-gray-700 mb-2">上传文件</label>
+                            <!-- 拖拽上传区域 -->
+                            <div id="dropZone" class="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-blue-500 transition-colors cursor-pointer">
+                                <i class="fas fa-cloud-upload-alt text-4xl text-gray-400 mb-2"></i>
+                                <p class="text-sm text-gray-600 mb-1">拖拽文件到此处，或点击选择文件</p>
+                                <p class="text-xs text-gray-500">支持格式：Excel (.xlsx, .xls) 和 CSV (.csv)</p>
+                                <input type="file" id="fileInput" accept=".xlsx,.xls,.csv" multiple class="hidden">
+                            </div>
+                            <div class="mt-3 flex items-center justify-between">
+                                <div class="text-sm text-gray-600" id="selectedFilesInfo">未选择文件</div>
+                                <button onclick="uploadFile()" class="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 text-sm whitespace-nowrap flex items-center" id="uploadBtn" disabled>
+                                    <i class="fas fa-upload mr-2"></i>开始上传
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <!-- 文件列表区域 - 可滚动 -->
+                        <div class="flex-1 flex flex-col p-6 min-h-0">
+                            <div class="flex items-center justify-between mb-3 flex-shrink-0">
+                                <h4 class="font-medium text-gray-800">文件列表</h4>
+                                <div class="flex items-center space-x-2 text-sm">
+                                    <label class="inline-flex items-center">
+                                        <input type="checkbox" id="selectAllFiles" class="mr-1" onclick="toggleSelectAllFiles(this)">
+                                        <span class="text-gray-700">全选</span>
+                                    </label>
+                                    <button class="px-3 py-1 bg-red-600 text-white rounded hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition-opacity" id="deleteSelectedBtn" disabled>
+                                        <i class="fas fa-trash mr-1"></i>删除选中文件
+                                    </button>
+                                </div>
+                            </div>
+                            <div id="filesList" class="space-y-2 flex-1 min-h-0 overflow-y-auto border border-gray-200 rounded-lg p-2">
+                                <!-- 动态加载文件列表 -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <!-- 自定义弹窗 -->
+    <div id="customModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div class="bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
+            <div class="px-6 py-4 border-b border-gray-200">
+                <h3 id="modalTitle" class="text-lg font-semibold text-gray-800">提示</h3>
+            </div>
+            <div class="px-6 py-4">
+                <p id="modalMessage" class="text-gray-600"></p>
+            </div>
+            <div class="px-6 py-4 border-t border-gray-200 flex justify-end space-x-3">
+                <button id="modalCancel" class="hidden px-4 py-2 text-gray-600 border border-gray-300 rounded hover:bg-gray-50">取消</button>
+                <button id="modalConfirm" class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">确定</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="static/app.js"></script>
+</body>
+</html>
