@@ -1,5 +1,4 @@
 import sqlite3
-from pathlib import Path
 from typing import List, Dict, Any, Optional
 import math
 
@@ -98,6 +97,7 @@ class DatabaseManager:
             cursor = conn.cursor()
             
             # 读取SQL文件
+            sql = ""
             with open(sql_file_path, 'r', encoding='utf-8') as f:
                 sql = f.read()
             

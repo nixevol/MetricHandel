@@ -1,4 +1,5 @@
 // 高负荷小区监控相关功能
+// noinspection ExceptionCaughtLocallyJS
 
 // 显示高负荷小区监控面板
 function showHighLoadCellPanel() {
@@ -144,7 +145,7 @@ function renderOverloadTable(data) {
     
     // 渲染数据
     body.innerHTML = '';
-    data.forEach((row, index) => {
+    data.forEach((row) => {
         const tr = document.createElement('tr');
         tr.className = 'border-b border-gray-200 hover:bg-gray-50';
         

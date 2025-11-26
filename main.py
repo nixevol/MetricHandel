@@ -173,10 +173,12 @@ async def get_task_status(task_id: str):
     
     return status
 
+
+# noinspection PyTypeChecker
 @app.get("/api/tables/{table_name}/download")
 async def download_table_data(
     table_name: str,
-    format: str = Query(..., pattern="^(csv|xlsx)$"),
+    table_format: str = Query(..., pattern="^(csv|xlsx)$"),
     search_field: Optional[str] = None,
     search_value: Optional[str] = None
 ):
@@ -196,7 +198,7 @@ async def download_table_data(
         # 创建时间戳
         timestamp = time.strftime('%Y%m%d_%H%M%S')
         
-        if format == 'csv':
+        if table_format == 'csv':
             # 生成CSV
             output = io.StringIO()
             df.to_csv(output, index=False, encoding='utf-8-sig')  # 使用utf-8-sig支持中文
@@ -213,10 +215,11 @@ async def download_table_data(
                 }
             )
         
-        elif format == 'xlsx':
+        elif table_format == 'xlsx':
             # 生成Excel
             output = io.BytesIO()
             # Excel sheet名称处理（移除特殊字符，限制长度）
+            # noinspection RegExpRedundantEscape
             safe_sheet_name = re.sub(r'[^\w\u4e00-\u9fff\-_\.]', '_', table_name)[:31]
             
             with pd.ExcelWriter(output, engine='openpyxl') as writer:
@@ -387,11 +390,13 @@ async def query_overload(start_time: str = Query(..., description="开始时间"
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+
+# noinspection PyTypeChecker
 @app.get("/api/query/overload/download")
 async def download_overload_data(
     start_time: str = Query(..., description="开始时间"),
     end_time: str = Query(..., description="结束时间"),
-    format: str = Query(..., pattern="^(csv|xlsx)$")
+    table_format: str = Query(..., pattern="^(csv|xlsx)$")
 ):
     """下载突发高负荷小区数据为CSV或Excel格式"""
     try:
@@ -423,7 +428,7 @@ async def download_overload_data(
         safe_start = start_time.replace(':', '-').replace(' ', '_')
         safe_end = end_time.replace(':', '-').replace(' ', '_')
         
-        if format == 'csv':
+        if table_format == 'csv':
             # 生成CSV
             try:
                 output = io.StringIO()
@@ -444,7 +449,7 @@ async def download_overload_data(
             except Exception as e:
                 raise HTTPException(status_code=500, detail=f"CSV生成失败: {str(e)}")
         
-        elif format == 'xlsx':
+        elif table_format == 'xlsx':
             # 生成Excel
             try:
                 output = io.BytesIO()

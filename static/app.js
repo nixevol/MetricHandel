@@ -224,8 +224,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // 处理文件拖放
     dropZone.addEventListener('drop', function(e) {
         const dt = e.dataTransfer;
-        const files = dt.files;
-        fileInput.files = files;
+        fileInput.files = dt.files;
         updateFileSelection();
     }, false);
     
@@ -314,7 +313,6 @@ async function loadTableData(page = 1) {
         
         renderTable(data);
         renderPagination(data);
-        updateTableInfo(data.total_count);
         
     } catch (error) {
         await showAlert('加载数据失败: ' + error.message, '错误');
@@ -405,10 +403,6 @@ function renderPagination(data) {
     }
 }
 
-// 更新表信息
-function updateTableInfo(totalCount) {
-    // 在标签页模式下不需要单独的表信息显示
-}
 
 // 选择表
 function selectTable(tableName, targetElement) {
@@ -618,14 +612,6 @@ function clearSearch() {
     searchField = '';
     searchValue = '';
     loadTableData(1);
-}
-
-// 翻页
-function changePage(direction) {
-    const newPage = currentPage + direction;
-    if (newPage >= 1 && newPage <= totalPages) {
-        loadTableData(newPage);
-    }
 }
 
 // 清空表数据
