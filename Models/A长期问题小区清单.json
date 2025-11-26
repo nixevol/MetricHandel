@@ -1,0 +1,20 @@
+{
+    "File": {
+        "Path": "./Data/日常突发问题小区指标监控.xlsx",
+        "SheetName": "4G&5G长期问题清单"
+    },
+    "Table": {
+        "FieldRow": 1,
+        "StartRow": 2
+    },
+    "Columns": [
+        { "Field": "制式", "Target": "制式", "DefaultValue": "" },
+        { "Field": "CGI", "Target": "CGI", "DefaultValue": "" },
+        { "Field": "小区中文名", "Target": "小区中文名", "DefaultValue": "" },
+        { "Field": "长期问题类型", "Target": "长期问题类型", "DefaultValue": "" }
+    ],
+    "Export": {
+        "Database": "./DB/Data.db",
+        "Table": "长期问题小区清单"
+    }
+}

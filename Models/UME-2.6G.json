@@ -1,0 +1,25 @@
+{
+    "File": {
+        "Path": "./Data/*2.6G突发指标监控*.xlsx",
+        "SheetName": "Sheet0"
+    },
+    "Table": {
+        "FieldRow": 1,
+        "StartRow": 2
+    },
+    "Columns": [
+        { "Field": "开始时间", "Target": "开始时间", "DefaultValue": "" },
+        { "Field": "结束时间", "Target": "结束时间", "DefaultValue": "" },
+        { "Field": "gNBplmn", "Target": "PLMN", "DefaultValue": "460-00" },
+        { "Field": "gNBId", "Target": "gNBId", "DefaultValue": "" },
+        { "Field": "cellId", "Target": "CellID", "DefaultValue": "" },
+        { "Field": "CU小区配置名称", "Target": "小区名称", "DefaultValue": "" },
+        { "Field": "RRC连接最大连接用户数", "Target": "最大用户数", "DefaultValue": "" },
+        { "Field": "小区上行PRB占用率(%)", "Target": "上行利用率", "DefaultValue": "" },
+        { "Field": "小区下行PRB占用率(%)", "Target": "下行利用率", "DefaultValue": "" }
+    ],
+    "Export": {
+        "Database": "./DB/Data.db",
+        "Table": "5G指标"
+    }
+}

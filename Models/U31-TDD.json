@@ -9,16 +9,17 @@
     },
     "Columns": [
         { "Field": "开始时间", "Target": "开始时间", "DefaultValue": "" },
+        { "Field": "结束时间", "Target": "结束时间", "DefaultValue": "" },
         { "Field": "PLMN", "Target": "PLMN", "DefaultValue": "460-00" },
         { "Field": "eNodeB", "Target": "eNodeB", "DefaultValue": "" },
         { "Field": "小区", "Target": "CellID", "DefaultValue": "" },
         { "Field": "小区名称", "Target": "小区名称", "DefaultValue": "" },
-        { "Field": "0420-最大用户数_1731029447362-0-45", "Target": "RRC连接建立最大用户数", "DefaultValue": "" },
-        { "Field": "集团-上行PRB平均利用率  _1731029447362-0-34", "Target": "上行PRB平均利用率", "DefaultValue": "" },
-        { "Field": "集团-下行PRB平均利用率  _1731029447362-0-35", "Target": "下行PRB平均利用率", "DefaultValue": "" }
+        { "Field": "0420-最大用户数_1731029447362-0-45", "Target": "最大用户数", "DefaultValue": "" },
+        { "Field": "集团-上行PRB平均利用率  _1731029447362-0-34", "Target": "上行利用率", "DefaultValue": "" },
+        { "Field": "集团-下行PRB平均利用率  _1731029447362-0-35", "Target": "下行利用率", "DefaultValue": "" }
     ],
     "Export": {
-        "Database": "./DB/4G.db",
+        "Database": "./DB/Data.db",
         "Table": "4G指标"
     }
 }

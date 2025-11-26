@@ -30,6 +30,11 @@ async def read_root():
     """返回主页"""
     return FileResponse("static/index.html")
 
+@app.get("/.well-known/appspecific/com.chrome.devtools.json")
+async def chrome_devtools_config():
+    """Chrome DevTools配置（可选）"""
+    return {"status": "ok"}
+
 @app.get("/api/tables")
 async def get_tables():
     """获取所有表名"""
@@ -324,6 +329,158 @@ async def delete_file(filename: str):
         return {"message": f"文件 {filename} 删除成功"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/query/overload")
+async def query_overload(start_time: str = Query(..., description="开始时间"), 
+                        end_time: str = Query(..., description="结束时间")):
+    """执行突发高负荷小区查询"""
+    try:
+        sql_file = Path("./Scripts/OverLoad.sql")
+        if not sql_file.exists():
+            raise HTTPException(status_code=404, detail="SQL文件不存在")
+        
+        params = {
+            "start_time": start_time,
+            "end_time": end_time
+        }
+        
+        data = db.execute_sql_file(str(sql_file), params)
+        
+        # 统计信息
+        stats = {
+            "4G": {
+                "total": 0,
+                "burst": 0
+            },
+            "5G": {
+                "total": 0,
+                "burst": 0
+            }
+        }
+        
+        # 用于去重的CGI集合
+        cgi_4g_total = set()
+        cgi_4g_burst = set()
+        cgi_5g_total = set()
+        cgi_5g_burst = set()
+        
+        for row in data:
+            cgi = row.get("CGI", "")
+            system = row.get("制式", "")
+            is_burst = row.get("是否突发高负荷", "") == "是"
+            
+            if system == "4G":
+                cgi_4g_total.add(cgi)
+                if is_burst:
+                    cgi_4g_burst.add(cgi)
+            elif system == "5G":
+                cgi_5g_total.add(cgi)
+                if is_burst:
+                    cgi_5g_burst.add(cgi)
+        
+        stats["4G"]["total"] = len(cgi_4g_total)
+        stats["4G"]["burst"] = len(cgi_4g_burst)
+        stats["5G"]["total"] = len(cgi_5g_total)
+        stats["5G"]["burst"] = len(cgi_5g_burst)
+        
+        return {
+            "data": data,
+            "stats": stats,
+            "total_count": len(data)
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/query/overload/download")
+async def download_overload_data(
+    start_time: str = Query(..., description="开始时间"),
+    end_time: str = Query(..., description="结束时间"),
+    format: str = Query(..., pattern="^(csv|xlsx)$")
+):
+    """下载突发高负荷小区数据为CSV或Excel格式"""
+    try:
+        sql_file = Path("./Scripts/OverLoad.sql")
+        if not sql_file.exists():
+            raise HTTPException(status_code=404, detail="SQL文件不存在")
+        
+        params = {
+            "start_time": start_time,
+            "end_time": end_time
+        }
+        
+        # 执行SQL查询
+        try:
+            data = db.execute_sql_file(str(sql_file), params)
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"SQL执行失败: {str(e)}")
+        
+        if not data:
+            raise HTTPException(status_code=404, detail="没有数据可下载")
+        
+        # 转换为DataFrame
+        try:
+            df = pd.DataFrame(data)
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"数据转换失败: {str(e)}")
+        
+        # 生成文件名
+        import re
+        from urllib.parse import quote
+        
+        safe_start = start_time.replace(':', '-').replace(' ', '_')
+        safe_end = end_time.replace(':', '-').replace(' ', '_')
+        
+        if format == 'csv':
+            # 生成CSV
+            try:
+                output = io.StringIO()
+                df.to_csv(output, index=False, encoding='utf-8-sig')
+                output.seek(0)
+                
+                # 生成文件名
+                filename = f"突发高负荷小区_{safe_start}_{safe_end}.csv"
+                filename_encoded = quote(filename.encode('utf-8'))
+                
+                return StreamingResponse(
+                    io.BytesIO(output.getvalue().encode('utf-8-sig')),
+                    media_type="text/csv",
+                    headers={
+                        "Content-Disposition": f"attachment; filename*=UTF-8''{filename_encoded}"
+                    }
+                )
+            except Exception as e:
+                raise HTTPException(status_code=500, detail=f"CSV生成失败: {str(e)}")
+        
+        elif format == 'xlsx':
+            # 生成Excel
+            try:
+                output = io.BytesIO()
+                safe_sheet_name = "突发高负荷小区"[:31]
+                
+                with pd.ExcelWriter(output, engine='openpyxl') as writer:
+                    df.to_excel(writer, sheet_name=safe_sheet_name, index=False)
+                output.seek(0)
+                
+                # 生成文件名
+                filename = f"突发高负荷小区_{safe_start}_{safe_end}.xlsx"
+                filename_encoded = quote(filename.encode('utf-8'))
+                
+                return StreamingResponse(
+                    output,
+                    media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                    headers={
+                        "Content-Disposition": f"attachment; filename*=UTF-8''{filename_encoded}"
+                    }
+                )
+            except Exception as e:
+                raise HTTPException(status_code=500, detail=f"Excel生成失败: {str(e)}")
+            
+    except HTTPException:
+        raise
+    except Exception as e:
+        import traceback
+        error_detail = f"{str(e)}\n{traceback.format_exc()}"
+        raise HTTPException(status_code=500, detail=error_detail)
 
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=8000)

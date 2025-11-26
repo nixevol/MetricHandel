@@ -234,6 +234,8 @@ document.addEventListener('DOMContentLoaded', function() {
     if (deleteSelectedBtn) {
         deleteSelectedBtn.addEventListener('click', deleteSelectedFiles);
     }
+    
+    // 注意：指标监控按钮使用 onclick 绑定，不需要在这里重复绑定
 });
 
 // 加载所有表
@@ -409,7 +411,7 @@ function updateTableInfo(totalCount) {
 }
 
 // 选择表
-function selectTable(tableName) {
+function selectTable(tableName, targetElement) {
     currentTable = tableName;
     loadTableColumns();
     loadTableData();
@@ -418,13 +420,89 @@ function selectTable(tableName) {
     document.querySelectorAll('#tableTabs button').forEach(btn => {
         btn.className = 'px-4 py-2 text-sm font-medium text-gray-500 hover:text-gray-700 border-b-2 border-transparent hover:border-gray-300';
     });
-    event.target.className = 'px-4 py-2 text-sm font-medium text-blue-600 border-b-2 border-blue-600';
+    
+    // 如果提供了目标元素，使用它；否则通过文本内容查找按钮
+    let targetBtn = targetElement;
+    if (!targetBtn) {
+        const buttons = document.querySelectorAll('#tableTabs button');
+        buttons.forEach(btn => {
+            if (btn.textContent === tableName) {
+                targetBtn = btn;
+            }
+        });
+    }
+    
+    if (targetBtn) {
+        targetBtn.className = 'px-4 py-2 text-sm font-medium text-blue-600 border-b-2 border-blue-600';
+    }
     
     // 显示数据表格和操作按钮
     document.getElementById('noDataMessage').classList.add('hidden');
     document.getElementById('dataTable').classList.remove('hidden');
     document.getElementById('downloadBtn').style.display = 'flex';
     document.getElementById('clearTableBtn').style.display = 'inline-flex';
+}
+
+// 刷新数据库
+async function refreshDatabase() {
+    const refreshBtn = document.getElementById('refreshDatabaseBtn');
+    const originalContent = refreshBtn.innerHTML;
+    
+    // 保存当前选中的表名
+    const previousTable = currentTable;
+    
+    try {
+        // 显示加载状态
+        refreshBtn.disabled = true;
+        refreshBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i>刷新中...';
+        
+        // 重新加载表列表
+        await loadTables();
+        
+        // 更新UI状态
+        if (allTables.length === 0) {
+            currentTable = '';
+            document.getElementById('noDataMessage').classList.remove('hidden');
+            document.getElementById('dataTable').classList.add('hidden');
+            const downloadBtn = document.getElementById('downloadBtn');
+            const clearBtn = document.getElementById('clearTableBtn');
+            if (downloadBtn) downloadBtn.style.display = 'none';
+            if (clearBtn) clearBtn.style.display = 'none';
+        } else {
+            document.getElementById('noDataMessage').classList.add('hidden');
+            updateTableTabs();
+            
+            // 如果之前有选中的表且该表仍然存在，重新选中并加载数据
+            if (previousTable && allTables.includes(previousTable)) {
+                currentTable = previousTable;
+                await loadTableColumns();
+                await loadTableData(1);
+                // 更新标签页选中状态
+                document.querySelectorAll('#tableTabs button').forEach(btn => {
+                    if (btn.textContent === previousTable) {
+                        btn.className = 'px-4 py-2 text-sm font-medium text-blue-600 border-b-2 border-blue-600';
+                    } else {
+                        btn.className = 'px-4 py-2 text-sm font-medium text-gray-500 hover:text-gray-700 border-b-2 border-transparent hover:border-gray-300';
+                    }
+                });
+                // 显示数据表格和操作按钮
+                document.getElementById('dataTable').classList.remove('hidden');
+                document.getElementById('downloadBtn').style.display = 'flex';
+                document.getElementById('clearTableBtn').style.display = 'inline-flex';
+            } else if (!currentTable && allTables.length > 0) {
+                // 如果没有选中表，选中第一个表
+                selectTable(allTables[0]);
+            }
+        }
+        
+    } catch (error) {
+        console.error('刷新数据库失败:', error);
+        await showAlert('刷新数据库失败: ' + error.message, '错误');
+    } finally {
+        // 恢复按钮状态
+        refreshBtn.disabled = false;
+        refreshBtn.innerHTML = originalContent;
+    }
 }
 
 // 显示数据库管理面板
@@ -436,17 +514,8 @@ function showDatabasePanel() {
     document.getElementById('pageTitle').textContent = '数据库管理';
     document.getElementById('pageSubtitle').textContent = '查看和管理数据表';
     
-    if (allTables.length === 0) {
-        document.getElementById('noDataMessage').classList.remove('hidden');
-        document.getElementById('dataTable').classList.add('hidden');
-        // 隐藏操作按钮
-        const downloadBtn = document.getElementById('downloadBtn');
-        const clearBtn = document.getElementById('clearTableBtn');
-        if (downloadBtn) downloadBtn.style.display = 'none';
-        if (clearBtn) clearBtn.style.display = 'none';
-    } else {
-        updateTableTabs();
-    }
+    // 每次切换到数据库管理页面时自动刷新
+    refreshDatabase();
 }
 
 // 显示合并数据面板
@@ -482,6 +551,20 @@ function updateNavigation(activeId) {
     if (activeBtn) {
         activeBtn.classList.add('active');
     }
+    // 如果点击的是子菜单项，也激活父菜单
+    if (activeId === 'nav-high-load-cell') {
+        const parentBtn = document.getElementById('nav-burst-monitor');
+        if (parentBtn) {
+            parentBtn.classList.add('active');
+        }
+        // 确保子菜单展开
+        const submenu = document.getElementById('burst-monitor-submenu');
+        const arrow = document.getElementById('burst-monitor-arrow');
+        if (submenu && submenu.classList.contains('hidden')) {
+            submenu.classList.remove('hidden');
+            if (arrow) arrow.style.transform = 'rotate(180deg)';
+        }
+    }
 }
 
 // 隐藏所有面板
@@ -490,7 +573,36 @@ function hideAllPanels() {
     document.getElementById('databasePanel').classList.add('hidden');
     document.getElementById('scriptsPanel').classList.add('hidden');
     document.getElementById('filesPanel').classList.add('hidden');
+    const highLoadPanel = document.getElementById('highLoadCellPanel');
+    if (highLoadPanel) {
+        highLoadPanel.classList.add('hidden');
+    }
 }
+
+// 切换指标监控菜单展开/收起
+function toggleBurstMonitorMenu() {
+    const submenu = document.getElementById('burst-monitor-submenu');
+    const arrow = document.getElementById('burst-monitor-arrow');
+    
+    if (!submenu || !arrow) {
+        console.error('无法找到子菜单元素');
+        return false;
+    }
+    
+    // 直接使用 toggle 方法切换 hidden 类
+    submenu.classList.toggle('hidden');
+    
+    // 更新箭头旋转
+    if (submenu.classList.contains('hidden')) {
+        arrow.style.transform = 'rotate(0deg)';
+    } else {
+        arrow.style.transform = 'rotate(180deg)';
+    }
+    
+    return false; // 阻止事件冒泡
+}
+
+// 高负荷小区监控相关功能已移至 static/high-load-cell.js
 
 // 搜索数据
 function searchData() {

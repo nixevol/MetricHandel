@@ -1,0 +1,118 @@
+<!-- 高负荷小区监控面板 -->
+<div id="highLoadCellPanel" class="hidden">
+    <div class="bg-white rounded-lg shadow-sm">
+        <!-- 统计信息卡片 -->
+        <div class="p-6 border-b border-gray-200">
+            <div class="grid grid-cols-4 gap-4 mb-4">
+                <!-- 4G高负荷小区 -->
+                <div class="bg-gradient-to-br from-blue-50 to-blue-100 p-5 rounded-xl border-2 border-blue-300 shadow-sm hover:shadow-md transition-shadow">
+                    <div class="flex items-center justify-between">
+                        <div class="flex-1">
+                            <p class="text-sm font-medium text-gray-700 mb-2">4G高负荷小区</p>
+                            <p id="stat-4g-total" class="text-3xl font-bold text-blue-700">0</p>
+                        </div>
+                        <div class="bg-blue-200 rounded-full p-3">
+                            <i class="fas fa-signal text-2xl text-blue-600"></i>
+                        </div>
+                    </div>
+                </div>
+                <!-- 5G高负荷小区 -->
+                <div class="bg-gradient-to-br from-green-50 to-green-100 p-5 rounded-xl border-2 border-green-300 shadow-sm hover:shadow-md transition-shadow">
+                    <div class="flex items-center justify-between">
+                        <div class="flex-1">
+                            <p class="text-sm font-medium text-gray-700 mb-2">5G高负荷小区</p>
+                            <p id="stat-5g-total" class="text-3xl font-bold text-green-700">0</p>
+                        </div>
+                        <div class="bg-green-200 rounded-full p-3">
+                            <i class="fas fa-signal text-2xl text-green-600"></i>
+                        </div>
+                    </div>
+                </div>
+                <!-- 4G突发高负荷 -->
+                <div class="bg-gradient-to-br from-red-50 to-red-100 p-5 rounded-xl border-2 border-red-300 shadow-sm hover:shadow-md transition-shadow">
+                    <div class="flex items-center justify-between">
+                        <div class="flex-1">
+                            <p class="text-sm font-medium text-gray-700 mb-2">4G突发高负荷</p>
+                            <p id="stat-4g-burst" class="text-3xl font-bold text-red-700">0</p>
+                        </div>
+                        <div class="bg-red-200 rounded-full p-3">
+                            <i class="fas fa-triangle-exclamation text-2xl text-red-600"></i>
+                        </div>
+                    </div>
+                </div>
+                <!-- 5G突发高负荷 -->
+                <div class="bg-gradient-to-br from-red-50 to-red-100 p-5 rounded-xl border-2 border-red-300 shadow-sm hover:shadow-md transition-shadow">
+                    <div class="flex items-center justify-between">
+                        <div class="flex-1">
+                            <p class="text-sm font-medium text-gray-700 mb-2">5G突发高负荷</p>
+                            <p id="stat-5g-burst" class="text-3xl font-bold text-red-700">0</p>
+                        </div>
+                        <div class="bg-red-200 rounded-full p-3">
+                            <i class="fas fa-triangle-exclamation text-2xl text-red-600"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 时间范围选择 -->
+            <div class="flex items-center space-x-4">
+                <div class="flex items-center space-x-2">
+                    <label class="text-sm font-medium text-gray-700">开始时间:</label>
+                    <input type="datetime-local" id="overloadStartTime" class="px-3 py-2 border border-gray-300 rounded-lg text-sm">
+                </div>
+                <div class="flex items-center space-x-2">
+                    <label class="text-sm font-medium text-gray-700">结束时间:</label>
+                    <input type="datetime-local" id="overloadEndTime" class="px-3 py-2 border border-gray-300 rounded-lg text-sm">
+                </div>
+                <button onclick="queryOverloadData()" class="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 text-sm flex items-center">
+                    <i class="fas fa-search mr-2"></i>查询
+                </button>
+                <button onclick="resetOverloadTimeRange()" class="bg-gray-500 text-white px-4 py-2 rounded-lg hover:bg-gray-600 text-sm">
+                    重置
+                </button>
+            </div>
+        </div>
+        
+        <!-- 数据表格 -->
+        <div class="p-6">
+            <div id="overloadLoading" class="hidden text-center py-10">
+                <div class="inline-block">
+                    <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-2"></div>
+                    <p class="text-gray-600">加载中...</p>
+                </div>
+            </div>
+            
+            <div id="overloadNoData" class="hidden text-center py-20">
+                <i class="fas fa-database text-gray-400 text-6xl mb-4"></i>
+                <h3 class="text-xl font-medium text-gray-600 mb-2">暂无数据</h3>
+                <p class="text-gray-500">请选择时间范围后点击查询</p>
+            </div>
+            
+            <div id="overloadDataTable" class="hidden">
+                <div class="mb-4 flex items-center justify-between">
+                    <div class="text-sm text-gray-600">
+                        共 <span id="overloadTotalCount" class="font-medium">0</span> 条记录
+                    </div>
+                    <div class="flex items-center space-x-2">
+                        <button onclick="exportOverloadData('csv')" class="bg-green-600 text-white px-3 py-1 rounded text-sm hover:bg-green-700 flex items-center">
+                            <i class="fas fa-file-csv mr-1"></i>导出CSV
+                        </button>
+                        <button onclick="exportOverloadData('xlsx')" class="bg-green-600 text-white px-3 py-1 rounded text-sm hover:bg-green-700 flex items-center">
+                            <i class="fas fa-file-excel mr-1"></i>导出Excel
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="overflow-x-auto" style="max-height: calc(100vh - 450px); overflow-y: auto;">
+                    <table class="w-full table-auto border-collapse">
+                        <thead id="overloadTableHeader" class="bg-gray-50" style="position: sticky; top: 0; z-index: 10;">
+                        </thead>
+                        <tbody id="overloadTableBody" class="bg-white">
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+

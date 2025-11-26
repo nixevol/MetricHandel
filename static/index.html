@@ -4,6 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>MetricHandel</title>
+    <!-- Favicon -->
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' fill='%233b82f6' rx='15'/%3E%3Cpath d='M20 70 L30 50 L40 60 L50 40 L60 55 L70 35 L80 45' stroke='white' stroke-width='4' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3Ccircle cx='20' cy='70' r='3' fill='white'/%3E%3Ccircle cx='30' cy='50' r='3' fill='white'/%3E%3Ccircle cx='40' cy='60' r='3' fill='white'/%3E%3Ccircle cx='50' cy='40' r='3' fill='white'/%3E%3Ccircle cx='60' cy='55' r='3' fill='white'/%3E%3Ccircle cx='70' cy='35' r='3' fill='white'/%3E%3Ccircle cx='80' cy='45' r='3' fill='white'/%3E%3C/svg%3E">
+    <link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' fill='%233b82f6' rx='15'/%3E%3Cpath d='M20 70 L30 50 L40 60 L50 40 L60 55 L70 35 L80 45' stroke='white' stroke-width='4' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3Ccircle cx='20' cy='70' r='3' fill='white'/%3E%3Ccircle cx='30' cy='50' r='3' fill='white'/%3E%3Ccircle cx='40' cy='60' r='3' fill='white'/%3E%3Ccircle cx='50' cy='40' r='3' fill='white'/%3E%3Ccircle cx='60' cy='55' r='3' fill='white'/%3E%3Ccircle cx='70' cy='35' r='3' fill='white'/%3E%3Ccircle cx='80' cy='45' r='3' fill='white'/%3E%3C/svg%3E">
     <!-- 本地静态资源，便于在内网环境运行，通过 /static 挂载访问 -->
     <link href="/static/libs/tailwind.min.css" rel="stylesheet">
     <script src="/static/libs/axios.min.js"></script>
@@ -13,6 +16,7 @@
         .nav-btn {
             color: #cbd5e1;
             background-color: transparent;
+            cursor: pointer;
         }
         .nav-btn:hover {
             background-color: #374151;
@@ -24,6 +28,10 @@
         }
         .nav-btn.active:hover {
             background-color: #4b5563;
+        }
+        /* 子菜单展开动画 */
+        #burst-monitor-submenu {
+            transition: all 0.3s ease;
         }
     </style>
 </head>
@@ -43,26 +51,42 @@
                         <i class="fas fa-folder mr-3"></i>
                         文件管理
                     </button>
-                    <button id="nav-database" onclick="showDatabasePanel()" class="nav-btn w-full text-left px-4 py-3 rounded-lg transition-colors flex items-center">
-                        <i class="fas fa-database mr-3"></i>
-                        数据库管理
-                    </button>
                     <button id="nav-scripts" onclick="showScriptsPanel()" class="nav-btn w-full text-left px-4 py-3 rounded-lg transition-colors flex items-center">
                         <i class="fas fa-layer-group mr-3"></i>
                         合并数据
                     </button>
+                    <button id="nav-database" onclick="showDatabasePanel()" class="nav-btn w-full text-left px-4 py-3 rounded-lg transition-colors flex items-center">
+                        <i class="fas fa-database mr-3"></i>
+                        数据库管理
+                    </button>
+                    <!-- 指标监控 - 二级导航 -->
+                    <div class="space-y-1">
+                        <button id="nav-burst-monitor" onclick="toggleBurstMonitorMenu()" class="nav-btn w-full text-left px-4 py-3 rounded-lg transition-colors flex items-center justify-between">
+                            <div class="flex items-center">
+                                <i class="fas fa-chart-line mr-3"></i>
+                                指标监控
+                            </div>
+                            <i id="burst-monitor-arrow" class="fas fa-chevron-down text-xs transition-transform duration-300" style="transform: rotate(180deg);"></i>
+                        </button>
+                        <div id="burst-monitor-submenu" class="pl-4 space-y-1">
+                            <button id="nav-high-load-cell" onclick="showHighLoadCellPanel()" class="nav-btn w-full text-left px-4 py-2 rounded-lg transition-colors flex items-center text-sm">
+                                <i class="fas fa-circle-notch mr-3 text-xs"></i>
+                                突发高负荷小区监控
+                            </button>
+                        </div>
+                    </div>
                 </div>
             </nav>
         </div>
         
         <!-- 主内容区 -->
-        <div class="flex-1 flex flex-col overflow-auto">
+        <div class="flex-1 flex flex-col overflow-hidden">
             <!-- 顶部工具栏 -->
             <header class="bg-white shadow-sm border-b px-6 py-4 flex-shrink-0">
                 <div class="flex justify-between items-center">
                     <div>
-                        <h2 id="pageTitle" class="text-2xl font-semibold text-gray-800">欢迎使用</h2>
-                        <p id="pageSubtitle" class="text-sm text-gray-600 mt-1">选择左侧菜单开始操作</p>
+                        <h2 id="pageTitle" class="text-2xl font-semibold text-gray-800"> </h2>
+                        <p id="pageSubtitle" class="text-sm text-gray-600 mt-1"> </p>
                     </div>
                     <div class="flex items-center space-x-4">
                         <div id="searchContainer" class="hidden">
@@ -87,27 +111,11 @@
             <!-- 内容区域 -->
             <main class="flex-1 p-6 overflow-auto">
                 <!-- 欢迎页面 -->
-                <div id="welcomePanel" class="text-center py-20">
-                    <div class="max-w-md mx-auto">
+                <div id="welcomePanel" class="flex items-center justify-center min-h-full">
+                    <div class="text-center">
                         <i class="fas fa-chart-line text-6xl text-blue-600 mb-6"></i>
                         <h3 class="text-2xl font-semibold text-gray-800 mb-4">MetricHandel</h3>
-                        <div class="grid grid-cols-3 gap-4 text-sm">
-                            <div class="bg-blue-50 p-4 rounded-lg cursor-pointer" onclick="showFilesPanel()">
-                                <i class="fas fa-folder text-blue-600 mb-2"></i>
-                                <p class="font-medium">文件管理</p>
-                                <p class="text-gray-600">管理数据文件</p>
-                            </div>
-                            <div class="bg-green-50 p-4 rounded-lg cursor-pointer" onclick="showDatabasePanel()">
-                                <i class="fas fa-database text-green-600 mb-2"></i>
-                                <p class="font-medium">数据库管理</p>
-                                <p class="text-gray-600">查看数据表</p>
-                            </div>
-                            <div class="bg-purple-50 p-4 rounded-lg cursor-pointer" onclick="showScriptsPanel()">
-                                <i class="fas fa-layer-group text-purple-600 mb-2"></i>
-                                <p class="font-medium">合并数据</p>
-                                <p class="text-gray-600">批量处理数据</p>
-                            </div>
-                        </div>
+                        <p class="text-gray-600">请从左侧导航菜单选择功能</p>
                     </div>
                 </div>
                 
@@ -124,6 +132,9 @@
                                     </nav>
                                 </div>
                                 <div class="flex items-center space-x-2 ml-4 flex-shrink-0">
+                                    <button id="refreshDatabaseBtn" onclick="refreshDatabase()" class="bg-blue-600 text-white px-3 py-1 rounded text-sm hover:bg-blue-700 flex items-center" title="刷新数据库">
+                                        <i class="fas fa-sync-alt mr-1"></i>刷新
+                                    </button>
                                     <div class="relative">
                                         <button id="downloadBtn" onclick="toggleDownloadMenu()" class="bg-green-600 text-white px-3 py-1 rounded text-sm hover:bg-green-700 flex items-center" style="display: none;">
                                             <i class="fas fa-download mr-1"></i>下载数据
@@ -260,7 +271,17 @@
                         </div>
                     </div>
                 </div>
+                
+                <!-- 高负荷小区监控面板 - 从外部文件加载 -->
+                <div id="highLoadCellPanelContainer"></div>
             </main>
+            
+            <!-- 底部Footer -->
+            <footer class="bg-white border-t border-gray-200 px-6 py-3 flex-shrink-0">
+                <div class="text-center text-sm text-gray-500">
+                    <p>&copy; 2025 NIXEVOL. All rights reserved.</p>
+                </div>
+            </footer>
         </div>
     </div>
 
@@ -280,6 +301,19 @@
         </div>
     </div>
 
+    <!-- 加载高负荷小区监控面板 -->
+    <script>
+        // 加载高负荷小区监控面板HTML
+        fetch('/static/modules/high-load-cell/panel.html')
+            .then(response => response.text())
+            .then(html => {
+                document.getElementById('highLoadCellPanelContainer').innerHTML = html;
+            })
+            .catch(error => {
+                console.error('加载高负荷小区监控面板失败:', error);
+            });
+    </script>
     <script src="static/app.js"></script>
+    <script src="static/modules/high-load-cell/index.js"></script>
 </body>
 </html>
