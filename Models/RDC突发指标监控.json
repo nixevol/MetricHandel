@@ -1,0 +1,25 @@
+{
+    "File": {
+        "Path": "./Data/RDC突发指标监控*.xlsx",
+        "SheetName": "Sheet0"
+    },
+    "Table": {
+        "FieldRow": 1,
+        "StartRow": 2
+    },
+    "Columns": [
+        { "Field": "开始时间", "Target": "开始时间", "DefaultValue": "" },
+        { "Field": "结束时间", "Target": "结束时间", "DefaultValue": "" },
+        { "Field": "PLMN", "Target": "PLMN", "DefaultValue": "460-00" },
+        { "Field": "eNodeBId", "Target": "eNodeB", "DefaultValue": "" },
+        { "Field": "cellId", "Target": "CellID", "DefaultValue": "" },
+        { "Field": "E-UTRAN FDD小区名称", "Target": "小区名称", "DefaultValue": "" },
+        { "Field": "RRC连接建立最大用户数", "Target": "最大用户数", "DefaultValue": "" },
+        { "Field": "集团-上行PRB平均利用率", "Target": "上行利用率", "DefaultValue": "" },
+        { "Field": "集团-下行PRB平均利用率", "Target": "下行利用率", "DefaultValue": "" }
+    ],
+    "Export": {
+        "Database": "./DB/Data.db",
+        "Table": "4G指标"
+    }
+}
