@@ -1,7 +1,9 @@
 from fastapi import FastAPI, HTTPException, Query, UploadFile, File
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, StreamingResponse
+from starlette.middleware.base import BaseHTTPMiddleware
 from typing import Optional, List
+from contextlib import asynccontextmanager
 from database import DatabaseManager
 from data_processor import process_config
 from pathlib import Path
@@ -14,12 +16,45 @@ import uuid
 import pandas as pd
 import io
 import uvicorn
-
-app = FastAPI(title="MetricHandel API", version="1.0.0")
-db = DatabaseManager()
+import webbrowser
 
 # 任务状态存储
 task_status = {}
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """应用生命周期管理"""
+    # 启动时执行
+    def open_browser():
+        # 等待服务器完全启动
+        time.sleep(1.5)
+        webbrowser.open("http://127.0.0.1:8000")
+    
+    # 在后台线程中打开浏览器，避免阻塞启动
+    print("程序已运行，前端界面请在浏览器中打开：http://127.0.0.1:8000")
+    thread = threading.Thread(target=open_browser)
+    thread.daemon = True
+    thread.start()
+    
+    yield  # 应用运行期间
+    
+    # 关闭时执行（如果需要清理资源，可以在这里添加）
+
+app = FastAPI(title="MetricHandel API", version="1.0.0", lifespan=lifespan)
+db = DatabaseManager()
+
+# 中间件：为静态文件添加禁用缓存响应头（开发环境）
+class NoCacheMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request, call_next):
+        response = await call_next(request)
+        # 如果是静态文件请求，添加禁用缓存头
+        if request.url.path.startswith("/static/"):
+            response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+            response.headers["Pragma"] = "no-cache"
+            response.headers["Expires"] = "0"
+        return response
+
+app.add_middleware(NoCacheMiddleware)
 
 # 静态文件服务
 app.mount("/static", StaticFiles(directory="static"), name="static")
