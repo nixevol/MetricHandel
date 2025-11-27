@@ -4,6 +4,11 @@ let totalPages = 1;
 let searchField = '';
 let searchValue = '';
 let allTables = [];
+// 多字段筛选和排序
+let columnFilters = {}; // {字段名: {rule: 'contains', value: 'xxx'}}
+let sortField = null;
+let sortOrder = 'ASC'; // 'ASC' 或 'DESC'
+let openFilterMenu = null; // 当前打开的筛选菜单
 
 // 选中文件集合（用于批量删除）
 let selectedFiles = new Set();
@@ -300,9 +305,27 @@ async function loadTableData(page = 1) {
             page_size: 50
         };
         
+        // 兼容旧的单字段查询方式
         if (searchField && searchValue) {
             params.search_field = searchField;
             params.search_value = searchValue;
+        }
+        
+        // 多字段筛选（包含规则和值）
+        const activeFilters = {};
+        for (const [field, filter] of Object.entries(columnFilters)) {
+            if (filter && filter.value && String(filter.value).trim()) {
+                activeFilters[field] = filter;
+            }
+        }
+        if (Object.keys(activeFilters).length > 0) {
+            params.filters = JSON.stringify(activeFilters);
+        }
+        
+        // 排序
+        if (sortField) {
+            params.sort_field = sortField;
+            params.sort_order = sortOrder;
         }
         
         const response = await axios.get(`/api/tables/${currentTable}/data`, { params });
@@ -324,7 +347,7 @@ function renderTable(data) {
     const header = document.getElementById('tableHeader');
     const body = document.getElementById('tableBody');
     
-    // 渲染表头
+    // 渲染表头（包含筛选和排序）
     header.innerHTML = '';
     const headerRow = document.createElement('tr');
     data.columns.forEach(column => {
@@ -334,9 +357,66 @@ function renderTable(data) {
         th.style.position = 'sticky';
         th.style.top = '0';
         th.style.zIndex = '20';
-        th.style.minWidth = '100px';
+        th.style.minWidth = '120px';
         th.style.whiteSpace = 'nowrap';
-        th.textContent = column;
+        
+        // 创建表头容器
+        const headerContainer = document.createElement('div');
+        headerContainer.className = 'flex items-center justify-between relative';
+        
+        // 字段名
+        const nameSpan = document.createElement('span');
+        nameSpan.textContent = column;
+        nameSpan.className = 'flex-1';
+        
+        // 右侧按钮容器
+        const buttonContainer = document.createElement('div');
+        buttonContainer.className = 'flex items-center space-x-1 ml-2';
+        
+        // 筛选按钮
+        const filterBtn = document.createElement('button');
+        filterBtn.className = `px-1 py-1 text-xs rounded hover:bg-gray-200 ${columnFilters[column] ? 'text-blue-600 bg-blue-50' : 'text-gray-400'}`;
+        filterBtn.innerHTML = '<i class="fas fa-filter"></i>';
+        filterBtn.title = '筛选';
+        filterBtn.onclick = (e) => {
+            e.stopPropagation();
+            toggleFilterMenu(column, filterBtn, th);
+        };
+        
+        // 排序按钮
+        const sortContainer = document.createElement('div');
+        sortContainer.className = 'flex flex-col';
+        sortContainer.style.fontSize = '10px';
+        sortContainer.style.lineHeight = '0.8';
+        
+        const sortUp = document.createElement('button');
+        sortUp.innerHTML = '▲';
+        sortUp.className = `cursor-pointer hover:text-blue-600 ${sortField === column && sortOrder === 'ASC' ? 'text-blue-600' : 'text-gray-400'}`;
+        sortUp.title = '升序';
+        sortUp.onclick = (e) => {
+            e.stopPropagation();
+            setSort(column, 'ASC');
+        };
+        
+        const sortDown = document.createElement('button');
+        sortDown.innerHTML = '▼';
+        sortDown.className = `cursor-pointer hover:text-blue-600 ${sortField === column && sortOrder === 'DESC' ? 'text-blue-600' : 'text-gray-400'}`;
+        sortDown.title = '降序';
+        sortDown.onclick = (e) => {
+            e.stopPropagation();
+            setSort(column, 'DESC');
+        };
+        
+        sortContainer.appendChild(sortUp);
+        sortContainer.appendChild(sortDown);
+        
+        buttonContainer.appendChild(filterBtn);
+        buttonContainer.appendChild(sortContainer);
+        
+        headerContainer.appendChild(nameSpan);
+        headerContainer.appendChild(buttonContainer);
+        
+        th.appendChild(headerContainer);
         headerRow.appendChild(th);
     });
     header.appendChild(headerRow);
@@ -362,6 +442,165 @@ function renderTable(data) {
         
         body.appendChild(tr);
     });
+}
+
+// 设置排序
+function setSort(field, order) {
+    if (sortField === field && sortOrder === order) {
+        // 如果点击的是当前排序字段和顺序，则取消排序
+        sortField = null;
+        sortOrder = 'ASC';
+    } else {
+        sortField = field;
+        sortOrder = order;
+    }
+    loadTableData(1);
+}
+
+// 切换筛选菜单
+function toggleFilterMenu(column, button, thElement) {
+    // 如果点击的是当前打开的菜单，则关闭
+    if (openFilterMenu && openFilterMenu.column === column) {
+        closeFilterMenu();
+        return;
+    }
+    
+    // 关闭其他打开的菜单
+    closeFilterMenu();
+    
+    // 确保th元素是相对定位
+    thElement.style.position = 'relative';
+    
+    // 获取th元素的宽度
+    const thWidth = thElement.offsetWidth;
+    
+    // 计算菜单应该的宽度（不超过列宽，但至少180px，最大250px）
+    const menuWidth = Math.max(180, Math.min(250, thWidth - 8));
+    
+    // 创建筛选菜单容器
+    const menu = document.createElement('div');
+    menu.className = 'absolute bg-white border border-gray-300 rounded shadow-lg z-50';
+    menu.style.width = menuWidth + 'px';
+    menu.style.maxWidth = menuWidth + 'px';
+    menu.style.top = '100%';
+    menu.style.left = '0';
+    menu.style.marginTop = '2px';
+    menu.style.boxSizing = 'border-box';
+    menu.style.padding = '12px';
+    menu.style.display = 'flex';
+    menu.style.flexDirection = 'column';
+    menu.style.gap = '8px';
+    
+    // 获取当前筛选条件
+    const currentFilter = columnFilters[column] || { rule: 'contains', value: '' };
+    
+    // 规则选择下拉框（上面）
+    const ruleSelect = document.createElement('select');
+    ruleSelect.className = 'w-full px-2 py-1.5 text-xs border border-gray-300 rounded';
+    ruleSelect.style.boxSizing = 'border-box';
+    ruleSelect.style.width = '100%';
+    const rules = [
+        { value: 'contains', label: '包含' },
+        { value: 'equals', label: '等于' },
+        { value: 'starts', label: '开头' },
+        { value: 'ends', label: '结尾' },
+        { value: 'greater', label: '大于' },
+        { value: 'greater_equal', label: '大于等于' },
+        { value: 'less', label: '小于' },
+        { value: 'less_equal', label: '小于等于' }
+    ];
+    rules.forEach(rule => {
+        const option = document.createElement('option');
+        option.value = rule.value;
+        option.textContent = rule.label;
+        if (rule.value === currentFilter.rule) {
+            option.selected = true;
+        }
+        ruleSelect.appendChild(option);
+    });
+    
+    // 值输入框（中间）
+    const valueInput = document.createElement('input');
+    valueInput.type = 'text';
+    valueInput.placeholder = '输入筛选值...';
+    valueInput.className = 'w-full px-2 py-1.5 text-xs border border-gray-300 rounded';
+    valueInput.style.boxSizing = 'border-box';
+    valueInput.style.width = '100%';
+    valueInput.value = currentFilter.value || '';
+    
+    // 按钮容器（下面）
+    const btnContainer = document.createElement('div');
+    btnContainer.className = 'flex space-x-2';
+    btnContainer.style.width = '100%';
+    btnContainer.style.marginTop = '4px';
+    
+    // 应用按钮
+    const applyBtn = document.createElement('button');
+    applyBtn.className = 'flex-1 px-3 py-1.5 text-xs bg-blue-600 text-white rounded hover:bg-blue-700';
+    applyBtn.textContent = '应用';
+    applyBtn.onclick = (e) => {
+        e.stopPropagation();
+        const rule = ruleSelect.value;
+        const value = valueInput.value.trim();
+        
+        if (value) {
+            columnFilters[column] = { rule, value };
+        } else {
+            delete columnFilters[column];
+        }
+        
+        closeFilterMenu();
+        loadTableData(1);
+    };
+    
+    // 清除按钮
+    const clearBtn = document.createElement('button');
+    clearBtn.className = 'flex-1 px-3 py-1.5 text-xs bg-gray-500 text-white rounded hover:bg-gray-600';
+    clearBtn.textContent = '清除';
+    clearBtn.onclick = (e) => {
+        e.stopPropagation();
+        delete columnFilters[column];
+        closeFilterMenu();
+        loadTableData(1);
+    };
+    
+    // 按顺序添加元素：规则选择 -> 输入框 -> 按钮
+    btnContainer.appendChild(applyBtn);
+    btnContainer.appendChild(clearBtn);
+    
+    menu.appendChild(ruleSelect);
+    menu.appendChild(valueInput);
+    menu.appendChild(btnContainer);
+    
+    // 将菜单添加到th元素
+    thElement.style.position = 'relative';
+    thElement.appendChild(menu);
+    
+    // 记录当前打开的菜单
+    openFilterMenu = { column, menu, button, thElement };
+    
+    // 点击其他地方关闭菜单
+    setTimeout(() => {
+        document.addEventListener('click', function closeOnClickOutside(e) {
+            if (!menu.contains(e.target) && e.target !== button) {
+                closeFilterMenu();
+                document.removeEventListener('click', closeOnClickOutside);
+            }
+        });
+    }, 0);
+    
+    // 聚焦输入框
+    valueInput.focus();
+}
+
+// 关闭筛选菜单
+function closeFilterMenu() {
+    if (openFilterMenu) {
+        if (openFilterMenu.menu && openFilterMenu.menu.parentNode) {
+            openFilterMenu.menu.parentNode.removeChild(openFilterMenu.menu);
+        }
+        openFilterMenu = null;
+    }
 }
 
 // 渲染分页
@@ -407,6 +646,11 @@ function renderPagination(data) {
 // 选择表
 function selectTable(tableName, targetElement) {
     currentTable = tableName;
+    // 重置筛选和排序
+    closeFilterMenu();
+    columnFilters = {};
+    sortField = null;
+    sortOrder = 'ASC';
     loadTableColumns();
     loadTableData();
     
@@ -444,6 +688,12 @@ async function refreshDatabase() {
     
     // 保存当前选中的表名
     const previousTable = currentTable;
+    
+    // 清除筛选规则和排序
+    closeFilterMenu();
+    columnFilters = {};
+    sortField = null;
+    sortOrder = 'ASC';
     
     try {
         // 显示加载状态
@@ -611,6 +861,11 @@ function clearSearch() {
     document.getElementById('searchValue').value = '';
     searchField = '';
     searchValue = '';
+    // 清空所有列筛选
+    closeFilterMenu();
+    columnFilters = {};
+    sortField = null;
+    sortOrder = 'ASC';
     loadTableData(1);
 }
 
@@ -861,11 +1116,22 @@ async function downloadTableData(format) {
         downloadMenu.classList.add('hidden');
         
         // 构建下载URL
-        let url = `/api/tables/${currentTable}/download?format=${format}`;
+        let url = `/api/tables/${currentTable}/download?table_format=${format}`;
         
-        // 如果有搜索条件，添加到URL
+        // 兼容旧的单字段查询方式
         if (searchField && searchValue) {
             url += `&search_field=${encodeURIComponent(searchField)}&search_value=${encodeURIComponent(searchValue)}`;
+        }
+        
+        // 多字段筛选（包含规则和值）
+        const activeFilters = {};
+        for (const [field, filter] of Object.entries(columnFilters)) {
+            if (filter && filter.value && String(filter.value).trim()) {
+                activeFilters[field] = filter;
+            }
+        }
+        if (Object.keys(activeFilters).length > 0) {
+            url += `&filters=${encodeURIComponent(JSON.stringify(activeFilters))}`;
         }
         
         // 使用fetch检查下载状态

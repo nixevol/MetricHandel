@@ -93,11 +93,26 @@ async def get_table_data(
     page: int = Query(1, ge=1),
     page_size: int = Query(50, ge=1, le=1000),
     search_field: Optional[str] = None,
-    search_value: Optional[str] = None
+    search_value: Optional[str] = None,
+    filters: Optional[str] = Query(None, description="JSON格式的多字段筛选条件"),
+    sort_field: Optional[str] = None,
+    sort_order: Optional[str] = Query(None, pattern="^(asc|desc|ASC|DESC)$")
 ):
-    """获取表数据（分页）"""
+    """获取表数据（分页），支持多字段筛选和排序"""
     try:
-        result = db.get_table_data(table_name, page, page_size, search_field, search_value)
+        # 解析filters JSON字符串
+        filters_dict = None
+        if filters:
+            try:
+                filters_dict = json.loads(filters)
+            except json.JSONDecodeError:
+                filters_dict = None
+        
+        result = db.get_table_data(
+            table_name, page, page_size, 
+            search_field, search_value,
+            filters_dict, sort_field, sort_order
+        )
         return result
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -215,13 +230,27 @@ async def download_table_data(
     table_name: str,
     table_format: str = Query(..., pattern="^(csv|xlsx)$"),
     search_field: Optional[str] = None,
-    search_value: Optional[str] = None
+    search_value: Optional[str] = None,
+    filters: Optional[str] = Query(None, description="JSON格式的多字段筛选条件"),
+    sort_field: Optional[str] = None,
+    sort_order: Optional[str] = Query(None, pattern="^(asc|desc|ASC|DESC)$")
 ):
-    """下载表数据为CSV或Excel格式"""
+    """下载表数据为CSV或Excel格式，支持多字段筛选和排序"""
     try:
+        # 解析filters JSON字符串
+        filters_dict = None
+        if filters:
+            try:
+                filters_dict = json.loads(filters)
+            except json.JSONDecodeError:
+                filters_dict = None
+        
         # 获取所有数据（不分页）
-        result = db.get_table_data(table_name, page=1, page_size=999999, 
-                                 search_field=search_field, search_value=search_value)
+        result = db.get_table_data(
+            table_name, page=1, page_size=999999, 
+            search_field=search_field, search_value=search_value,
+            filters=filters_dict, sort_field=sort_field, sort_order=sort_order
+        )
         
         if not result['data']:
             raise HTTPException(status_code=404, detail="没有数据可下载")
