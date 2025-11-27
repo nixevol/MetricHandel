@@ -22,7 +22,7 @@ import webbrowser
 task_status = {}
 
 @asynccontextmanager
-async def lifespan(app: FastAPI):
+async def lifespan(_app: FastAPI):
     """应用生命周期管理"""
     # 启动时执行
     def open_browser():
