@@ -431,7 +431,7 @@ async def query_overload(start_time: str = Query(..., description="开始时间"
 async def download_overload_data(
     start_time: str = Query(..., description="开始时间"),
     end_time: str = Query(..., description="结束时间"),
-    table_format: str = Query(..., pattern="^(csv|xlsx)$")
+    table_format: str = Query(..., alias="format", pattern="^(csv|xlsx)$")
 ):
     """下载突发高负荷小区数据为CSV或Excel格式"""
     try:
