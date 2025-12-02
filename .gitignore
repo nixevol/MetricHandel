@@ -55,5 +55,4 @@ desktop.ini
 # Temporary files
 *.tmp
 *.temp
-Data/历史性能_日常突发问题指标监控_20251125111912.xlsx
-Data/历史性能_日常突发指标监控_20251125112031.xlsx
+Data/*

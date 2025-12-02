@@ -1,0 +1,18 @@
+{
+    "File": {
+        "Path": "./Data/日常突发问题小区指标监控.xlsx",
+        "SheetName": "重要监控区域清单"
+    },
+    "Table": {
+        "FieldRow": 1,
+        "StartRow": 2
+    },
+    "Columns": [
+        { "Field": "CGI", "Target": "CGI", "DefaultValue": "" },
+        { "Field": "重要区域", "Target": "重要区域", "DefaultValue": "" }
+    ],
+    "Export": {
+        "Database": "./DB/Data.db",
+        "Table": "重要监控区域清单"
+    }
+}
