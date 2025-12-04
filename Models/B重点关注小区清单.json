@@ -13,7 +13,6 @@
         { "Field": "重要区域", "Target": "重要区域", "DefaultValue": "" }
     ],
     "Export": {
-        "Database": "./DB/Data.db",
         "Table": "重要监控区域清单"
     }
 }

@@ -15,7 +15,6 @@
         { "Field": "长期问题类型", "Target": "长期问题类型", "DefaultValue": "" }
     ],
     "Export": {
-        "Database": "./DB/Data.db",
         "Table": "长期问题小区清单"
     }
 }

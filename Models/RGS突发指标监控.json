@@ -20,7 +20,6 @@
         { "Field": "集团-下行PRB平均利用率  _1642424248283-0-37", "Target": "下行利用率", "DefaultValue": "" }
     ],
     "Export": {
-        "Database": "./DB/Data.db",
         "Table": "4G指标"
     }
 }
