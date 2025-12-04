@@ -1,7 +1,8 @@
 {
     "File": {
         "Path": "./Data/*_日常突发问题指标监控_*.xlsx",
-        "SheetName": "sheet1"
+        "SheetName": "sheet1",
+        "DeleteAfterProcess": false
     },
     "Table": {
         "FieldRow": 1,

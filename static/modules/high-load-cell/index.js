@@ -96,6 +96,12 @@ async function queryOverloadData() {
         document.getElementById('stat-5g-total').textContent = result.stats['5G'].total;
         document.getElementById('stat-5g-burst').textContent = result.stats['5G'].burst;
         
+        // 更新重要区域统计
+        document.getElementById('stat-4g-total-important').textContent = result.stats['4G'].total_important || 0;
+        document.getElementById('stat-4g-burst-important').textContent = result.stats['4G'].burst_important || 0;
+        document.getElementById('stat-5g-total-important').textContent = result.stats['5G'].total_important || 0;
+        document.getElementById('stat-5g-burst-important').textContent = result.stats['5G'].burst_important || 0;
+        
         // 更新总记录数
         document.getElementById('overloadTotalCount').textContent = result.total_count;
         

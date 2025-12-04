@@ -413,11 +413,15 @@ async def query_overload(start_time: str = Query(..., description="开始时间"
         stats = {
             "4G": {
                 "total": 0,
-                "burst": 0
+                "burst": 0,
+                "total_important": 0,
+                "burst_important": 0
             },
             "5G": {
                 "total": 0,
-                "burst": 0
+                "burst": 0,
+                "total_important": 0,
+                "burst_important": 0
             }
         }
         
@@ -427,24 +431,44 @@ async def query_overload(start_time: str = Query(..., description="开始时间"
         cgi_5g_total = set()
         cgi_5g_burst = set()
         
+        # 重要区域CGI集合
+        cgi_4g_total_important = set()
+        cgi_4g_burst_important = set()
+        cgi_5g_total_important = set()
+        cgi_5g_burst_important = set()
+        
         for row in data:
             cgi = row.get("CGI", "")
             system = row.get("制式", "")
             is_burst = row.get("是否突发高负荷", "") == "是"
+            important_area = row.get("重要区域", "")
+            is_important = important_area and str(important_area).strip() != ""
             
             if system == "4G":
                 cgi_4g_total.add(cgi)
+                if is_important:
+                    cgi_4g_total_important.add(cgi)
                 if is_burst:
                     cgi_4g_burst.add(cgi)
+                    if is_important:
+                        cgi_4g_burst_important.add(cgi)
             elif system == "5G":
                 cgi_5g_total.add(cgi)
+                if is_important:
+                    cgi_5g_total_important.add(cgi)
                 if is_burst:
                     cgi_5g_burst.add(cgi)
+                    if is_important:
+                        cgi_5g_burst_important.add(cgi)
         
         stats["4G"]["total"] = len(cgi_4g_total)
         stats["4G"]["burst"] = len(cgi_4g_burst)
+        stats["4G"]["total_important"] = len(cgi_4g_total_important)
+        stats["4G"]["burst_important"] = len(cgi_4g_burst_important)
         stats["5G"]["total"] = len(cgi_5g_total)
         stats["5G"]["burst"] = len(cgi_5g_burst)
+        stats["5G"]["total_important"] = len(cgi_5g_total_important)
+        stats["5G"]["burst_important"] = len(cgi_5g_burst_important)
         
         return {
             "data": data,

@@ -19,15 +19,23 @@ class DataProcessor:
         """处理所有匹配的文件并导入数据库"""
         files = self._get_files()
         all_data = []
+        processed_files = []  # 记录已处理的文件
         
         for file in files:
             data = self._read_file(file)
             if data is not None and not data.empty:
                 all_data.append(data)
+                processed_files.append(file)  # 记录成功处理的文件
         
         if all_data:
             merged_data = pd.concat(all_data, ignore_index=True)
             self._save_to_db(merged_data)
+            
+            # 如果配置了删除文件，在处理完数据后删除
+            delete_after_process = self.config.get('File', {}).get('DeleteAfterProcess', False)
+            if delete_after_process:
+                self._delete_files(processed_files)
+            
             return len(merged_data)
         return 0
     
@@ -103,6 +111,17 @@ class DataProcessor:
                 pass
         
         conn.close()
+    
+    def _delete_files(self, file_paths):
+        """删除已处理的文件"""
+        for file_path in file_paths:
+            try:
+                file_obj = Path(file_path)
+                if file_obj.exists():
+                    file_obj.unlink()
+            except Exception as e:
+                # 删除失败不影响主流程，只记录错误
+                print(f"警告: 删除文件失败 {file_path}: {e}")
 
 
 def process_config(config_path):
